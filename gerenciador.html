@@ -1,0 +1,1241 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Gerenciador Financeiro</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+        <style>
+            body {
+                background-color: #f8f9fa;
+            }
+        
+            .sidebar {
+                height: 100vh;
+                width: 250px;
+                position: fixed;
+                top: 0;
+                left: 0;
+                background-color: #212529;
+                padding-top: 1rem;
+                transition: width 0.3s;
+                overflow: hidden;
+            }
+        
+            .sidebar.collapsed {
+                width: 60px;
+            }
+        
+            .sidebar a {
+                color: #adb5bd;
+                padding: 10px 20px;
+                display: flex;
+                align-items: center;
+                text-decoration: none;
+                white-space: nowrap;
+            }
+        
+            .sidebar a i {
+                margin-right: 10px;
+                width: 20px;
+                text-align: center;
+            }
+        
+            .sidebar.collapsed a span {
+                display: none;
+            }
+        
+            .sidebar a:hover,
+            .sidebar a.active {
+                background-color: #0d6efd;
+                color: white;
+            }
+        
+            .content {
+                margin-left: 250px;
+                padding: 2rem;
+                transition: margin-left 0.3s;
+            }
+        
+            .content.collapsed {
+                margin-left: 60px;
+            }
+        
+            .table thead {
+                background-color: #2e7d32;
+                color: white;
+            }
+        
+            .horizontal-table th:first-child,
+            .horizontal-table td:first-child {
+                background-color: #e8f5e9;
+                font-weight: bold;
+            }
+        
+            #toggleSidebar {
+                position: fixed;
+                top: 10px;
+                left: 260px;
+                z-index: 1050;
+                background: #0d6efd;
+                color: white;
+                border: none;
+                padding: 6px 12px;
+                border-radius: 4px;
+                cursor: pointer;
+                transition: left 0.3s;
+            }
+        
+            .sidebar.collapsed+#toggleSidebar {
+                left: 70px;
+            }
+        
+            @media (max-width: 768px) {
+                #toggleSidebar {
+                    left: 60px;
+                }
+        
+                .sidebar.collapsed+#toggleSidebar {
+                    left: 60px;
+                }
+            }
+
+            #recebimentos,
+            #gastosFixos,
+            #gastosVariaveis,
+            #gastosExtras,
+            #investimentos,
+            #patrimonio,
+            #saldo,
+            #graficos {
+                margin-left: 20px;
+            }
+        </style>
+</head>
+
+<body>
+    <div class="sidebar" id="sidebar">
+        <a href="#" class="active" onclick="mostrarTela('recebimentos')"><i class="fas fa-hand-holding-usd"></i>
+            <span>Recebimentos</span></a>
+        <a href="#" onclick="mostrarTela('gastosFixos')"><i class="fas fa-file-invoice-dollar"></i> <span>Gastos
+                Fixos</span></a>
+        <a href="#" onclick="mostrarTela('gastosVariaveis')"><i class="fas fa-bolt"></i> <span>Gastos
+                Variáveis</span></a>
+        <a href="#" onclick="mostrarTela('gastosExtras')"><i class="fas fa-exclamation-circle"></i> <span>Gastos
+                Extras</span></a>
+        <a href="#" onclick="mostrarTela('investimentos')"><i class="fas fa-chart-line"></i>
+            <span>Investimentos</span></a>
+        <a href="#" onclick="mostrarTela('saldo')"><i class="fas fa-wallet"></i> <span>Saldo</span></a>
+        <a href="#" onclick="mostrarTela('patrimonio')"><i class="fas fa-piggy-bank"></i> <span>Patrimônio</span></a>
+        <a href="#" onclick="mostrarTela('graficos')"><i class="fas fa-chart-pie"></i> <span>Gráficos</span></a>
+        <div id="cotacoesSidebar"></div>
+    </div>
+
+    <button id="toggleSidebar"><i class="fas fa-bars"></i></button>
+    <script>
+        document.getElementById("toggleSidebar").addEventListener("click", () => {
+            document.getElementById("sidebar").classList.toggle("collapsed");
+            document.querySelector(".content").classList.toggle("collapsed");
+        });
+    </script>
+
+    <div class="content">
+        <div id="recebimentos" class="tela">
+            <br>
+            <h1>Recebimentos</h1>
+            <button class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#modalRecebimento">+ Novo
+                Recebimento</button>
+            <table class="table table-bordered horizontal-table" id="tabelaHorizontal">
+                <thead>
+                    <tr>
+                        <th>Categoria</th>
+                        <th>Janeiro</th>
+                        <th>Fevereiro</th>
+                        <th>Março</th>
+                        <th>Abril</th>
+                        <th>Maio</th>
+                        <th>Junho</th>
+                        <th>Julho</th>
+                        <th>Agosto</th>
+                        <th>Setembro</th>
+                        <th>Outubro</th>
+                        <th>Novembro</th>
+                        <th>Dezembro</th>
+                    </tr>
+                </thead>
+                <tbody id="gridRecebimentos"></tbody>
+            </table>
+        </div>
+        <!-- Tela de Gastos Variáveis -->
+        <div id="gastosVariaveis" class="tela d-none">
+            <br>
+            <h1>Gastos Variáveis</h1>
+            <button class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#modalGastosVariaveis">+ Novo
+                Gasto
+                Variável</button>
+            <table class="table table-bordered horizontal-table" id="tabelaGastosVariaveis">
+                <thead>
+                    <tr>
+                        <th>Categoria</th>
+                        <th>Janeiro</th>
+                        <th>Fevereiro</th>
+                        <th>Março</th>
+                        <th>Abril</th>
+                        <th>Maio</th>
+                        <th>Junho</th>
+                        <th>Julho</th>
+                        <th>Agosto</th>
+                        <th>Setembro</th>
+                        <th>Outubro</th>
+                        <th>Novembro</th>
+                        <th>Dezembro</th>
+                    </tr>
+                </thead>
+                <tbody id="gridGastosVariaveis"></tbody>
+            </table>
+        </div>
+
+        <!-- Tela de Gastos Fixos -->
+        <div id="gastosFixos" class="tela d-none">
+            <br>
+            <h1>Gastos Fixos</h1>
+            <button class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#modalGastosFixos">+ Novo Gasto
+                Fixo</button>
+            <table class="table table-bordered horizontal-table" id="tabelaGastosFixos">
+                <thead>
+                    <tr>
+                        <th>Categoria</th>
+                        <th>Janeiro</th>
+                        <th>Fevereiro</th>
+                        <th>Março</th>
+                        <th>Abril</th>
+                        <th>Maio</th>
+                        <th>Junho</th>
+                        <th>Julho</th>
+                        <th>Agosto</th>
+                        <th>Setembro</th>
+                        <th>Outubro</th>
+                        <th>Novembro</th>
+                        <th>Dezembro</th>
+                    </tr>
+                </thead>
+                <tbody id="gridGastosFixos"></tbody>
+            </table>
+        </div>
+        <!-- Tela de Gastos Extras -->
+        <div id="gastosExtras" class="tela d-none">
+            <br>
+            <h1>Gastos Extras</h1>
+            <button class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#modalGastosExtras">+ Novo Gasto
+                Extra</button>
+            <table class="table table-bordered horizontal-table" id="tabelaGastosExtras">
+                <thead>
+                    <tr>
+                        <th>Categoria</th>
+                        <th>Janeiro</th>
+                        <th>Fevereiro</th>
+                        <th>Março</th>
+                        <th>Abril</th>
+                        <th>Maio</th>
+                        <th>Junho</th>
+                        <th>Julho</th>
+                        <th>Agosto</th>
+                        <th>Setembro</th>
+                        <th>Outubro</th>
+                        <th>Novembro</th>
+                        <th>Dezembro</th>
+                    </tr>
+                </thead>
+                <tbody id="gridGastosExtras"></tbody>
+            </table>
+        </div>
+
+        <!-- Modal Gastos Extras -->
+        <div class="modal fade" id="modalGastosExtras" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Novo Gasto Extra</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="formGastosExtras">
+                            <div class="mb-3">
+                                <label class="form-label">Categoria</label>
+                                <select id="categoriaGastosExtras" class="form-select" required>
+                                    <option>Mntç. Casa</option>
+                                    <option>Mntç. Carro</option>
+                                    <option>Hospital</option>
+                                    <option>Médico</option>
+                                    <option>Dentista</option>
+                                    <option>Material escolar</option>
+                                    <option>Uniforme</option>
+                                    <option>Outros</option>
+                                    <option>Socorro Emergencial</option>
+                                    <option>Advogado</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Mês</label>
+                                <select id="mesGastosExtras" class="form-select" required>
+                                    <option>Janeiro</option>
+                                    <option>Fevereiro</option>
+                                    <option>Março</option>
+                                    <option>Abril</option>
+                                    <option>Maio</option>
+                                    <option>Junho</option>
+                                    <option>Julho</option>
+                                    <option>Agosto</option>
+                                    <option>Setembro</option>
+                                    <option>Outubro</option>
+                                    <option>Novembro</option>
+                                    <option>Dezembro</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Valor</label>
+                                <input type="number" id="valorGastosExtras" class="form-control" required>
+                            </div>
+                            <button type="submit" class="btn btn-success">Salvar</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+      
+
+
+
+
+
+        <!-- Modal Gastos Fixos -->
+        <div class="modal fade" id="modalGastosFixos" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Novo Gasto Fixo</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="formGastosFixos">
+                            <div class="mb-3">
+                                <label class="form-label">Categoria</label>
+                                <select id="categoriaGastosFixos" class="form-select" required>
+                                    <option>Aluguel</option>
+                                    <option>Finan. Casa</option>
+                                    <option>Condomínio</option>
+                                    <option>Seguro Casa</option>
+                                    <option>IPTU</option>
+                                    <option>Finan. Carro</option>
+                                    <option>Seguro Carro</option>
+                                    <option>Estacionamento</option>
+                                    <option>IPVA</option>
+                                    <option>Seguro de Vida</option>
+                                    <option>Plano Funerário</option>
+                                    <option>Plano de Saúde</option>
+                                    <option>Escola</option>
+                                    <option>Faculdade</option>
+                                    <option>Cursos</option>
+                                    <option>Empréstimos</option>
+                                    <option>Metrô</option>
+                                    <option>Trem</option>
+                                    <option>Hotel</option>
+                                    <option>Airbnb</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Mês</label>
+                                <select id="mesGastosFixos" class="form-select" required>
+                                    <option>Janeiro</option>
+                                    <option>Fevereiro</option>
+                                    <option>Março</option>
+                                    <option>Abril</option>
+                                    <option>Maio</option>
+                                    <option>Junho</option>
+                                    <option>Julho</option>
+                                    <option>Agosto</option>
+                                    <option>Setembro</option>
+                                    <option>Outubro</option>
+                                    <option>Novembro</option>
+                                    <option>Dezembro</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Valor</label>
+                                <input type="number" id="valorGastosFixos" class="form-control" required>
+                            </div>
+                            <button type="submit" class="btn btn-success">Salvar</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+       
+
+
+        <!-- Modal Gastos Variáveis -->
+        <div class="modal fade" id="modalGastosVariaveis" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Novo Gasto Variável</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="formGastosVariaveis">
+                            <div class="mb-3">
+                                <label class="form-label">Categoria</label>
+                                <select id="categoriaGastosVariaveis" class="form-select" required>
+                                    <option>Água</option>
+                                    <option>Luz</option>
+                                    <option>Internet</option>
+                                    <option>Diarista</option>
+                                    <option>Gás</option>
+                                    <option>TV / Streamings</option>
+                                    <option>Telefone</option>
+                                    <option>Metrô</option>
+                                    <option>Onibus</option>
+                                    <option>Uber / Táxi</option>
+                                    <option>Gasolina</option>
+                                    <option>Estacionamento</option>
+                                    <option>Farmácia</option>
+                                    <option>Manicure</option>
+                                    <option>Academia</option>
+                                    <option>Esteticista</option>
+                                    <option>Cabelereiro</option>
+                                    <option>Mercado</option>
+                                    <option>Delivery</option>
+                                    <option>Feira</option>
+                                    <option>Padaria</option>
+                                    <option>Bar / Restaurantes</option>
+                                    <option>Teatro / Cinema</option>
+                                    <option>Viagens</option>
+                                    <option>Roupas</option>
+                                    <option>Calçados</option>
+                                    <option>Acessórios</option>
+                                    <option>Presentes</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Mês</label>
+                                <select id="mesGastosVariaveis" class="form-select" required>
+                                    <option>Janeiro</option>
+                                    <option>Fevereiro</option>
+                                    <option>Março</option>
+                                    <option>Abril</option>
+                                    <option>Maio</option>
+                                    <option>Junho</option>
+                                    <option>Julho</option>
+                                    <option>Agosto</option>
+                                    <option>Setembro</option>
+                                    <option>Outubro</option>
+                                    <option>Novembro</option>
+                                    <option>Dezembro</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Valor</label>
+                                <input type="number" id="valorGastosVariaveis" class="form-control" required>
+                            </div>
+                            <button type="submit" class="btn btn-success">Salvar</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tela de Investimentos -->
+        <div id="investimentos" class="tela d-none">
+            <br>
+            <h1>Investimentos</h1>
+            <button class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#modalInvestimentos">+ Novo
+                Investimento</button>
+            <table class="table table-bordered horizontal-table" id="tabelaInvestimentos">
+                <thead>
+                    <tr>
+                        <th>Categoria</th>
+                        <th>Janeiro</th>
+                        <th>Fevereiro</th>
+                        <th>Março</th>
+                        <th>Abril</th>
+                        <th>Maio</th>
+                        <th>Junho</th>
+                        <th>Julho</th>
+                        <th>Agosto</th>
+                        <th>Setembro</th>
+                        <th>Outubro</th>
+                        <th>Novembro</th>
+                        <th>Dezembro</th>
+                    </tr>
+                </thead>
+                <tbody id="gridInvestimentos"></tbody>
+            </table>
+        </div>
+
+    <!-- Tela de Patrimônio -->
+    <div id="patrimonio" class="tela d-none">
+        <br>
+        <h1>Patrimônio</h1>
+        <button class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#modalPatrimonio">+ Novo
+            Patrimônio</button>
+        <table class="table table-bordered horizontal-table" id="tabelaPatrimonio">
+            <thead>
+                <tr>
+                    <th>Categoria</th>
+                    <th>Janeiro</th>
+                    <th>Fevereiro</th>
+                    <th>Março</th>
+                    <th>Abril</th>
+                    <th>Maio</th>
+                    <th>Junho</th>
+                    <th>Julho</th>
+                    <th>Agosto</th>
+                    <th>Setembro</th>
+                    <th>Outubro</th>
+                    <th>Novembro</th>
+                    <th>Dezembro</th>
+                </tr>
+            </thead>
+            <tbody id="gridPatrimonio"></tbody>
+        </table>
+    </div>
+
+    <!-- Tela de Saldo -->
+    <div id="saldo" class="tela d-none">
+        <br>
+        <h1>Saldo</h1>
+        <table class="table table-bordered horizontal-table" id="tabelaSaldo">
+            <thead>
+                <tr>
+                    <th>Categoria</th>
+                    <th>Janeiro</th>
+                    <th>Fevereiro</th>
+                    <th>Março</th>
+                    <th>Abril</th>
+                    <th>Maio</th>
+                    <th>Junho</th>
+                    <th>Julho</th>
+                    <th>Agosto</th>
+                    <th>Setembro</th>
+                    <th>Outubro</th>
+                    <th>Novembro</th>
+                    <th>Dezembro</th>
+                </tr>
+            </thead>
+            <tbody id="gridSaldo"></tbody>
+        </table>
+    </div>
+
+<!-- Tela de Gráficos -->
+<div id="graficos" class="tela d-none">
+    <br>
+    <div class="card p-3 mb-4">
+        <h1 class="card-title">Visualização do Orçamento</h1>
+        <canvas id="graficoOrcamento" width="600" height="400"></canvas>
+    </div>
+    <div class="card p-3 mb-4">
+        <h1 class="card-title">Visualização de Investimentos</h1>
+        <canvas id="graficoInvestimentos" width="600" height="400"></canvas>
+    </div>
+    <div class="card p-3 mb-4">
+        <h1 class="mt-5">Tendência Mensal de Investimentos</h1>
+        <canvas id="graficoLinhaInvestimentos" height="400"></canvas>
+    </div>
+</div>
+    
+    <!-- Modal Patrimônio -->
+    <div class="modal fade" id="modalPatrimonio" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Novo Patrimônio</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formPatrimonio">
+                        <div class="mb-3">
+                            <label class="form-label">Categoria</label>
+                            <select id="categoriaPatrimonio" class="form-select" required>
+                                <option>Tesouro Selic</option>
+                                <option>Tesouro Prefixado</option>
+                                <option>Tesouro IPCA</option>
+                                <option>Tesouro RendA+</option>
+                                <option>Poupança</option>
+                                <option>Ações</option>
+                                <option>CDB</option>
+                                <option>LCI</option>
+                                <option>LCA</option>
+                                <option>CRI</option>
+                                <option>CRA</option>
+                                <option>Debêntures</option>
+                                <option>Imóveis</option>
+                                <option>Automóveis</option>
+                                <option>Moeda Estrangeira</option>
+                                <option>Criptoativos</option>
+                                <option>Previdência Privada</option>
+                                <option>Fundos Imobiliários</option>
+                                <option>Fundos Multimercado</option>
+                                <option>Outros</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Mês</label>
+                            <select id="mesPatrimonio" class="form-select" required>
+                                <option>Janeiro</option>
+                                <option>Fevereiro</option>
+                                <option>Março</option>
+                                <option>Abril</option>
+                                <option>Maio</option>
+                                <option>Junho</option>
+                                <option>Julho</option>
+                                <option>Agosto</option>
+                                <option>Setembro</option>
+                                <option>Outubro</option>
+                                <option>Novembro</option>
+                                <option>Dezembro</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Valor</label>
+                            <input type="number" id="valorPatrimonio" class="form-control" required>
+                        </div>
+                        <button type="submit" class="btn btn-success">Salvar</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+        
+        <!-- Modal Investimentos -->
+        <div class="modal fade" id="modalInvestimentos" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Novo Investimento</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="formInvestimentos">
+                            <div class="mb-3">
+                                <label class="form-label">Categoria</label>
+                                <select id="categoriaInvestimentos" class="form-select" required>
+                                    <option>Poupança</option>
+                                    <option>Tesouro Direto</option>
+                                    <option>Renda Fixa</option>
+                                    <option>Ações</option>
+                                    <option>Prev. Privada</option>
+                                    <option>Metais</option>
+                                    <option>Outros</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Mês</label>
+                                <select id="mesInvestimentos" class="form-select" required>
+                                    <option>Janeiro</option>
+                                    <option>Fevereiro</option>
+                                    <option>Março</option>
+                                    <option>Abril</option>
+                                    <option>Maio</option>
+                                    <option>Junho</option>
+                                    <option>Julho</option>
+                                    <option>Agosto</option>
+                                    <option>Setembro</option>
+                                    <option>Outubro</option>
+                                    <option>Novembro</option>
+                                    <option>Dezembro</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Valor</label>
+                                <input type="number" id="valorInvestimentos" class="form-control" required>
+                            </div>
+                            <button type="submit" class="btn btn-success">Salvar</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+       
+
+
+
+    </div>
+
+    <div class="modal fade" id="modalRecebimento" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Novo Recebimento</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formRecebimento">
+                        <div class="mb-3">
+                            <label class="form-label">Categoria</label>
+                            <select id="categoriaRecebimento" class="form-select" required>
+                                <option>Salário</option>
+                                <option>Horas extras</option>
+                                <option>Férias</option>
+                                <option>Décimo Terceiro</option>
+                                <option>Rendimentos</option>
+                                <option>Benefícios</option>
+                                <option>Outros</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Mês</label>
+                            <select id="mesRecebimento" class="form-select" required>
+                                <option>Janeiro</option>
+                                <option>Fevereiro</option>
+                                <option>Março</option>
+                                <option>Abril</option>
+                                <option>Maio</option>
+                                <option>Junho</option>
+                                <option>Julho</option>
+                                <option>Agosto</option>
+                                <option>Setembro</option>
+                                <option>Outubro</option>
+                                <option>Novembro</option>
+                                <option>Dezembro</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Valor</label>
+                            <input type="number" id="valorRecebimento" class="form-control" required>
+                        </div>
+                        <button type="submit" class="btn btn-success">Salvar</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    const meses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+
+    // Categorias
+    const categoriasRecebimentos = ["Salário", "Horas extras", "Férias", "Décimo Terceiro", "Rendimentos", "Benefícios", "Outros"];
+    const categoriasGastosFixos = ["Aluguel", "Finan. Casa", "Condomínio", "Seguro Casa", "IPTU", "Finan. Carro", "Seguro Carro", "Estacionamento", "IPVA", "Seguro de Vida", "Plano Funerário", "Plano de Saúde", "Escola", "Faculdade", "Cursos", "Empréstimos", "Metrô", "Trem", "Hotel", "Airbnb"];
+    const categoriasGastosVariaveis = ["Água", "Luz", "Internet", "Diarista", "Gás", "TV / Streamings", "Telefone", "Metrô", "Onibus", "Uber / Táxi", "Gasolina", "Estacionamento", "Farmácia", "Manicure", "Academia", "Esteticista", "Cabelereiro", "Mercado", "Delivery", "Feira", "Padaria", "Bar / Restaurantes", "Teatro / Cinema", "Viagens", "Roupas", "Calçados", "Acessórios", "Presentes"];
+    const categoriasGastosExtras = ["Mntç. Casa", "Mntç. Carro", "Hospital", "Médico", "Dentista", "Material escolar", "Uniforme", "Outros", "Socorro Emergencial", "Advogado"];
+    const categoriasInvestimentos = ["Poupança", "Tesouro Direto", "Renda Fixa", "Ações", "Prev. Privada", "Metais", "Outros"];
+    const categoriasPatrimonio = [
+        "Tesouro Selic", "Tesouro Prefixado", "Tesouro IPCA", "Tesouro RendA+", "Poupança",
+        "Ações", "CDB", "LCI", "LCA", "CRI", "CRA", "Debêntures", "Imóveis", "Automóveis",
+        "Moeda Estrangeira", "Criptoativos", "Previdência Privada", "Fundos Imobiliários", "Fundos Multimercado", "Outros"
+    ];
+
+    // Dados
+    let recebimentos = [];
+    let gastosFixos = [];
+    let gastosVariaveis = [];
+    let gastosExtras = [];
+    let investimentos = [];
+    let patrimonio = [];
+
+    // IndexedDB
+    const dbName = "FinancasDB";
+    let db;
+
+    const request = indexedDB.open(dbName, 5);
+
+    request.onupgradeneeded = function (event) {
+        db = event.target.result;
+        if (!db.objectStoreNames.contains("recebimentos")) db.createObjectStore("recebimentos", { keyPath: "id", autoIncrement: true });
+        if (!db.objectStoreNames.contains("gastosFixos")) db.createObjectStore("gastosFixos", { keyPath: "id", autoIncrement: true });
+        if (!db.objectStoreNames.contains("gastosVariaveis")) db.createObjectStore("gastosVariaveis", { keyPath: "id", autoIncrement: true });
+        if (!db.objectStoreNames.contains("gastosExtras")) db.createObjectStore("gastosExtras", { keyPath: "id", autoIncrement: true });
+        if (!db.objectStoreNames.contains("investimentos")) db.createObjectStore("investimentos", { keyPath: "id", autoIncrement: true });
+        if (!db.objectStoreNames.contains("patrimonio")) db.createObjectStore("patrimonio", { keyPath: "id", autoIncrement: true });
+    };
+
+    request.onsuccess = function (event) {
+        db = event.target.result;
+        carregarDados("recebimentos", recebimentos, atualizarGridRecebimentos);
+        carregarDados("gastosFixos", gastosFixos, atualizarGridGastosFixos);
+        carregarDados("gastosVariaveis", gastosVariaveis, atualizarGridGastosVariaveis);
+        carregarDados("gastosExtras", gastosExtras, atualizarGridGastosExtras);
+        carregarDados("investimentos", investimentos, atualizarGridInvestimentos);
+        carregarDados("patrimonio", patrimonio, () => {
+            atualizarGridPatrimonio();
+            atualizarGraficoInvestimentos();
+        });
+
+    };
+
+    function validarEntrada(categoria, mes, valor) {
+            if (!categoria || !mes || valor <= 0) {
+                alert("Por favor, preencha todos os campos corretamente.");
+                return false;
+            }
+            return true;
+        }
+
+    // Funções de carregamento e salvamento
+    function carregarDados(storeName, dataArray, callback) {
+        const tx = db.transaction(storeName, "readonly");
+        const store = tx.objectStore(storeName);
+        const request = store.getAll();
+
+        request.onsuccess = function () {
+            dataArray.splice(0, dataArray.length, ...request.result);
+            callback();
+        };
+    }
+
+    function salvarDados(storeName, data, callback) {
+            const tx = db.transaction(storeName, "readwrite");
+            const store = tx.objectStore(storeName);
+            store.add(data);
+
+            tx.oncomplete = function () {
+                // Exemplo de uso:
+                mostrarMensagem("success", "Dados salvos com sucesso!");
+
+                // Executa o callback para atualizar a interface
+                if (callback) callback();
+            };
+
+            tx.onerror = function () {
+                mostrarMensagem("danger", "Erro ao salvar os dados.");
+            };
+        }
+
+    function mostrarMensagem(tipo, mensagem) {
+            const alerta = document.createElement("div");
+            alerta.className = `alert alert-${tipo}`;
+            alerta.textContent = mensagem;
+            document.body.appendChild(alerta);
+            setTimeout(() => alerta.remove(), 3000);
+        }
+
+
+
+    // Função genérica para atualizar tabelas
+    function atualizarTabela(categorias, dados, tabelaId) {
+        const tabela = document.getElementById(tabelaId);
+        tabela.innerHTML = "";
+        const totais = Array(12).fill(0);
+
+        categorias.forEach(categoria => {
+            const tr = document.createElement("tr");
+            const tdCategoria = document.createElement("td");
+            tdCategoria.textContent = categoria;
+            tr.appendChild(tdCategoria);
+
+            meses.forEach((mes, i) => {
+                const td = document.createElement("td");
+                const item = dados.find(r => r.categoria === categoria && r.mes === mes);
+                const valor = item ? item.valor : 0;
+                totais[i] += valor;
+                td.textContent = valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                tr.appendChild(td);
+            });
+
+            tabela.appendChild(tr);
+        });
+
+        const trTotal = document.createElement("tr");
+        const thTotal = document.createElement("th");
+        thTotal.textContent = "TOTAL";
+        trTotal.appendChild(thTotal);
+
+        totais.forEach(valor => {
+            const td = document.createElement("th");
+            td.textContent = valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            trTotal.appendChild(td);
+        });
+
+        tabela.appendChild(trTotal);
+    }
+
+    // Funções específicas para cada tabela
+    function atualizarGridRecebimentos() {
+        atualizarTabela(categoriasRecebimentos, recebimentos, "gridRecebimentos");
+    }
+
+    function atualizarGridGastosFixos() {
+        atualizarTabela(categoriasGastosFixos, gastosFixos, "gridGastosFixos");
+    }
+
+    function atualizarGridGastosVariaveis() {
+        atualizarTabela(categoriasGastosVariaveis, gastosVariaveis, "gridGastosVariaveis");
+    }
+
+    function atualizarGridGastosExtras() {
+        atualizarTabela(categoriasGastosExtras, gastosExtras, "gridGastosExtras");
+    }
+
+    function atualizarGridInvestimentos() {
+        atualizarTabela(categoriasInvestimentos, investimentos, "gridInvestimentos");
+    }
+
+    function atualizarGridPatrimonio() {
+        atualizarTabela(categoriasPatrimonio, patrimonio, "gridPatrimonio");
+    }
+
+    // Submissão de formulários
+    document.getElementById("formRecebimento").onsubmit = function (e) {
+        e.preventDefault();
+        const categoria = document.getElementById("categoriaRecebimento").value;
+        const mes = document.getElementById("mesRecebimento").value;
+        const valor = parseFloat(document.getElementById("valorRecebimento").value);
+            // Validação
+        if (!validarEntrada(categoria, mes, valor)) return;
+
+        const existente = recebimentos.find(item => item.categoria === categoria && item.mes === mes);
+        if (existente) existente.valor += valor;
+        else recebimentos.push({ categoria, mes, valor });
+
+        atualizarGridRecebimentos();
+        salvarDados("recebimentos", { categoria, mes, valor }, atualizarGridRecebimentos);
+        document.getElementById("formRecebimento").reset();
+        bootstrap.Modal.getInstance(document.getElementById("modalRecebimento")).hide();
+    };
+
+    document.getElementById("formGastosFixos").onsubmit = function (e) {
+        e.preventDefault();
+        const categoria = document.getElementById("categoriaGastosFixos").value;
+        const mes = document.getElementById("mesGastosFixos").value;
+        const valor = parseFloat(document.getElementById("valorGastosFixos").value);
+            // Validação
+        if (!validarEntrada(categoria, mes, valor)) return;
+        const existente = gastosFixos.find(item => item.categoria === categoria && item.mes === mes);
+        if (existente) existente.valor += valor;
+        else gastosFixos.push({ categoria, mes, valor });
+
+        atualizarGridGastosFixos();
+        salvarDados("gastosFixos", { categoria, mes, valor }, atualizarGridGastosFixos);
+        document.getElementById("formGastosFixos").reset();
+        bootstrap.Modal.getInstance(document.getElementById("modalGastosFixos")).hide();
+    };
+
+    document.getElementById("formGastosVariaveis").onsubmit = function (e) {
+        e.preventDefault();
+        const categoria = document.getElementById("categoriaGastosVariaveis").value;
+        const mes = document.getElementById("mesGastosVariaveis").value;
+        const valor = parseFloat(document.getElementById("valorGastosVariaveis").value);
+            // Validação
+        if (!validarEntrada(categoria, mes, valor)) return;
+        const existente = gastosVariaveis.find(item => item.categoria === categoria && item.mes === mes);
+        if (existente) existente.valor += valor;
+        else gastosVariaveis.push({ categoria, mes, valor });
+
+        atualizarGridGastosVariaveis();
+        salvarDados("gastosVariaveis", { categoria, mes, valor }, atualizarGridGastosVariaveis);
+        document.getElementById("formGastosVariaveis").reset();
+        bootstrap.Modal.getInstance(document.getElementById("modalGastosVariaveis")).hide();
+    };
+
+    document.getElementById("formGastosExtras").onsubmit = function (e) {
+        e.preventDefault();
+        const categoria = document.getElementById("categoriaGastosExtras").value;
+        const mes = document.getElementById("mesGastosExtras").value;
+        const valor = parseFloat(document.getElementById("valorGastosExtras").value);
+            // Validação
+        if (!validarEntrada(categoria, mes, valor)) return;
+        const existente = gastosExtras.find(item => item.categoria === categoria && item.mes === mes);
+        if (existente) existente.valor += valor;
+        else gastosExtras.push({ categoria, mes, valor });
+
+        atualizarGridGastosExtras();
+        salvarDados("gastosExtras", { categoria, mes, valor }, atualizarGridGastosExtras);
+        document.getElementById("formGastosExtras").reset();
+        bootstrap.Modal.getInstance(document.getElementById("modalGastosExtras")).hide();
+    };
+
+    document.getElementById("formInvestimentos").onsubmit = function (e) {
+        e.preventDefault();
+        const categoria = document.getElementById("categoriaInvestimentos").value;
+        const mes = document.getElementById("mesInvestimentos").value;
+        const valor = parseFloat(document.getElementById("valorInvestimentos").value);
+            // Validação
+        if (!validarEntrada(categoria, mes, valor)) return;
+        const existente = investimentos.find(item => item.categoria === categoria && item.mes === mes);
+        if (existente) existente.valor += valor;
+        else investimentos.push({ categoria, mes, valor });
+
+        atualizarGridInvestimentos();
+        salvarDados("investimentos", { categoria, mes, valor }, () => {
+            atualizarGridInvestimentos();
+            atualizarGraficoInvestimentos();
+        });
+        atualizarGraficoInvestimentos();
+        document.getElementById("formInvestimentos").reset();
+        bootstrap.Modal.getInstance(document.getElementById("modalInvestimentos")).hide();
+    };
+
+    document.getElementById("formPatrimonio").onsubmit = function (e) {
+        e.preventDefault();
+        const categoria = document.getElementById("categoriaPatrimonio").value;
+        const mes = document.getElementById("mesPatrimonio").value;
+        const valor = parseFloat(document.getElementById("valorPatrimonio").value);
+        // Validação
+        if (!validarEntrada(categoria, mes, valor)) return;
+        const existente = patrimonio.find(item => item.categoria === categoria && item.mes === mes);
+        if (existente) existente.valor += valor;
+        else patrimonio.push({ categoria, mes, valor });
+
+        atualizarGridPatrimonio();
+        salvarDados("patrimonio", { categoria, mes, valor }, () => {
+            atualizarGridPatrimonio();
+            atualizarGraficoInvestimentos();
+        });
+        document.getElementById("formPatrimonio").reset();
+        bootstrap.Modal.getInstance(document.getElementById("modalPatrimonio")).hide();
+    };
+
+    // Alternar telas
+    function mostrarTela(telaId) {
+            document.querySelectorAll('.tela').forEach(div => div.classList.add('d-none'));
+            const ativa = document.getElementById(telaId);
+            if (ativa) ativa.classList.remove('d-none');
+
+            document.querySelectorAll('.sidebar a').forEach(a => a.classList.remove('active'));
+            const ativoLink = Array.from(document.querySelectorAll('.sidebar a'))
+                .find(a => a.getAttribute('onclick')?.includes(telaId));
+            if (ativoLink) ativoLink.classList.add('active');
+
+            // 👉 Atualiza o saldo sempre que essa tela for exibida
+            if (telaId === "saldo") {
+                atualizarGridSaldo();
+            }
+        }
+
+
+     function atualizarGridSaldo() {
+            const tabela = document.getElementById("gridSaldo");
+            tabela.innerHTML = "";
+            const linhas = [
+                { nome: "Receitas", dados: recebimentos },
+                { nome: "Gastos Fixos", dados: gastosFixos },
+                { nome: "Gastos Variáveis", dados: gastosVariaveis },
+                { nome: "Gastos Extras", dados: gastosExtras },
+                { nome: "Investimentos", dados: patrimonio }
+            ];
+
+            const totaisPorLinha = [];
+
+            linhas.forEach((linha, i) => {
+                const tr = document.createElement("tr");
+                const tdTitulo = document.createElement("td");
+                tdTitulo.textContent = linha.nome;
+                tr.appendChild(tdTitulo);
+
+                let totalMes = Array(12).fill(0);
+
+                linha.dados.forEach(entry => {
+                    const index = meses.indexOf(entry.mes);
+                    if (index !== -1) {
+                        totalMes[index] += entry.valor;
+                    }
+                });
+                 console.log(`Totais para ${linha.nome}:`, totalMes); // Log para depuração
+
+                totaisPorLinha[i] = totalMes;
+
+                totalMes.forEach(valor => {
+                    const td = document.createElement("td");
+                    td.textContent = valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                    tr.appendChild(td);
+                });
+
+                tabela.appendChild(tr);
+            });
+
+            // SALDO
+            const trSaldo = document.createElement("tr");
+            const thSaldo = document.createElement("th");
+            thSaldo.textContent = "Saldo Final";
+            trSaldo.appendChild(thSaldo);
+
+            for (let i = 0; i < 12; i++) {
+                const saldo = (totaisPorLinha[0]?.[i] || 0) // receitas
+                    - (totaisPorLinha[1]?.[i] || 0) // gastos fixos
+                    - (totaisPorLinha[2]?.[i] || 0) // gastos variáveis
+                    - (totaisPorLinha[3]?.[i] || 0) // gastos extras
+                    + (totaisPorLinha[4]?.[i] || 0); // investimentos
+                const td = document.createElement("th");
+                td.textContent = saldo.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                trSaldo.appendChild(td);
+            }
+
+            tabela.appendChild(trSaldo);
+        }
+
+        let graficoInvestimentosInstance = null;
+            let graficoOrcamentoInstance = null;
+
+            function atualizarGraficoOrcamento() {
+                const totalPorTipo = tipo => tipo.reduce((acc, item) => {
+                    const idx = meses.indexOf(item.mes);
+                    if (idx !== -1) acc[idx] += item.valor;
+                    return acc;
+                }, Array(12).fill(0)).reduce((a, b) => a + b, 0);
+
+                const totalFixos = totalPorTipo(gastosFixos);
+                const totalVariaveis = totalPorTipo(gastosVariaveis);
+                const totalExtras = totalPorTipo(gastosExtras);
+                const totalInvestimentos = totalPorTipo(patrimonio);
+
+                const ctx1 = document.getElementById('graficoOrcamento').getContext('2d');
+
+                if (graficoOrcamentoInstance) graficoOrcamentoInstance.destroy();
+
+                graficoOrcamentoInstance = new Chart(ctx1, {
+                    type: 'pie',
+                    data: {
+                        labels: ['Gastos Fixos', 'Gastos Variáveis', 'Gastos Extras', 'Investimentos'],
+                        datasets: [{
+                            data: [totalFixos, totalVariaveis, totalExtras, totalInvestimentos],
+                            backgroundColor: ['#1b5e20', '#2e7d32', '#66bb6a', '#a5d6a7']
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { position: 'right' },
+                            title: { display: true, text: 'Visualização do Orçamento' }
+                        }
+                    }
+                });
+            }
+
+            function atualizarGraficoInvestimentos() {
+                const categorias = [...new Set(patrimonio.map(p => p.categoria))];
+                const valores = categorias.map(c => patrimonio.filter(p => p.categoria === c).reduce((s, i) => s + i.valor, 0));
+
+                const ctx2 = document.getElementById('graficoInvestimentos').getContext('2d');
+
+                if (graficoInvestimentosInstance) graficoInvestimentosInstance.destroy();
+
+                graficoInvestimentosInstance = new Chart(ctx2, {
+                    type: 'pie',
+                    data: {
+                        labels: categorias,
+                        datasets: [{
+                            data: valores,
+                            backgroundColor: categorias.map((_, i) => `hsl(${i * 20}, 60%, 50%)`)
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { position: 'right' },
+                            title: { display: true, text: 'Visualização de Investimentos - %%' }
+                        }
+                    }
+                });
+            }
+
+            let graficoLinhaInvestimentosInstance = null;
+
+                function atualizarGraficoLinhaInvestimentos() {
+                    const ctx = document.getElementById("graficoLinhaInvestimentos").getContext("2d");
+
+                    if (graficoLinhaInvestimentosInstance) graficoLinhaInvestimentosInstance.destroy();
+
+                    const categorias = [...new Set(investimentos.map(p => p.categoria))];
+                    const dadosPorCategoria = categorias.map(cat => {
+                        const valoresMensais = meses.map(mes => {
+                            return investimentos
+                                .filter(p => p.categoria === cat && p.mes === mes)
+                                .reduce((soma, i) => soma + i.valor, 0);
+                        });
+                        return {
+                            label: cat,
+                            data: valoresMensais,
+                            fill: false,
+                            borderColor: `hsl(${Math.random() * 360}, 60%, 50%)`,
+                            tension: 0.3
+                        };
+                    });
+
+                    graficoLinhaInvestimentosInstance = new Chart(ctx, {
+                        type: "line",
+                        data: {
+                            labels: meses,
+                            datasets: dadosPorCategoria
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                title: {
+                                    display: true,
+                                    text: "Tendência Mensal de Investimentos"
+                                }
+                            },
+                            interaction: {
+                                mode: 'index',
+                                intersect: false,
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    title: {
+                                        display: true,
+                                        text: 'Valor (R$)'
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+
+
+            const oldMostrarTela = mostrarTela;
+            mostrarTela = function (telaId) {
+                oldMostrarTela(telaId);
+               if (telaId === 'graficos') {
+                    if (patrimonio.length > 0) {
+                        atualizarGraficoOrcamento();
+                        atualizarGraficoInvestimentos();
+                        atualizarGraficoLinhaInvestimentos(); 
+                    } else {
+                        console.warn("Dados de patrimônio ainda não carregados.");
+                    }
+                }
+            };
+</script>
+<script>
+   async function atualizarCotacoesSidebar() {
+        try {
+            const res = await fetch("https://economia.awesomeapi.com.br/json/last/USD-BRL,EUR-BRL,GBP-BRL,JPY-BRL,CNY-BRL,UYU-BRL,PYG-BRL,ARS-BRL,BTC-BRL,XAU-BRL");
+            const data = await res.json();
+            const cotacoesDiv = document.getElementById("cotacoesSidebar");
+            cotacoesDiv.innerHTML = `
+        <div class="text-white small mt-4 px-3">
+          <div><img src="https://flagcdn.com/w20/us.png" class="me-1"> <strong>Dólar:</strong> R$ ${parseFloat(data?.USDBRL?.bid || 0).toFixed(2)}</div>
+          <div><img src="https://flagcdn.com/w20/eu.png" class="me-1"> <strong>Euro:</strong> R$ ${parseFloat(data?.EURBRL?.bid || 0).toFixed(2)}</div>
+          <div><img src="https://flagcdn.com/w20/gb.png" class="me-1"> <strong>Libra:</strong> R$ ${parseFloat(data?.GBPBRL?.bid || 0).toFixed(2)}</div>
+          <div><img src="https://flagcdn.com/w20/jp.png" class="me-1"> <strong>Yene:</strong> R$ ${parseFloat(data?.JPYBRL?.bid || 0).toFixed(4)}</div>
+          <div><img src="https://flagcdn.com/w20/cn.png" class="me-1"> <strong>Yuan:</strong> R$ ${parseFloat(data?.CNYBRL?.bid || 0).toFixed(2)}</div>
+          <div><img src="https://flagcdn.com/w20/uy.png" class="me-1"> <strong>Pesos UY:</strong> R$ ${parseFloat(data?.UYUBRL?.bid || 0).toFixed(4)}</div>
+          <div><img src="https://flagcdn.com/w20/py.png" class="me-1"> <strong>Guarani:</strong> R$ ${parseFloat(data?.PYGBRL?.bid || 0).toFixed(5)}</div>
+          <div><img src="https://flagcdn.com/w20/ar.png" class="me-1"> <strong>Pesos AR:</strong> R$ ${parseFloat(data?.ARSBRL?.bid || 0).toFixed(4)}</div>
+          <div><img src="https://cryptologos.cc/logos/bitcoin-btc-logo.png?v=026" width="16" class="me-1"> <strong>Bitcoin:</strong> R$ ${(parseFloat(data?.BTCBRL?.bid || 0) / 1000).toFixed(0)} mil</div>
+          <div><img src="https://cdn-icons-png.flaticon.com/512/616/616408.png" width="16" class="me-1"> <strong>Ouro:</strong> R$ ${parseFloat(data?.XAUBRL?.bid || 0).toFixed(2)}</div>
+        </div>`;
+        } catch (e) {
+            console.error("Erro ao buscar cotações", e);
+        }
+    }
+    atualizarCotacoesSidebar();
+    setInterval(atualizarCotacoesSidebar, 30000);
+</script>
+
+<script>
+    document.querySelector(".sidebar").insertAdjacentHTML("beforeend", `<div id="cotacoesSidebar"></div>`);
+</script>
+   
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>
